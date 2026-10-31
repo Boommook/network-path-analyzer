@@ -1,0 +1,3 @@
+run_id,timestamp,destination,packet_loss,min_rtt,avg_rtt,max_rtt,stddev_rtt
+20261031_133925,2026-10-31T13:39:25,google.com,0.0,81.0,169.0,240.0,65.6505902486794
+20261031_134040,2026-10-31T13:40:40,google.com,0.0,38.0,46.0,58.0,8.34665601703261
