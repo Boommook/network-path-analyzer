@@ -155,11 +155,20 @@ def append_error(errors, run_id, destination, stage, error_type, error_message):
 # ------------------------------------------------------------
 # Procedure: main
 #
-# Purpose:
+# Purpose: Run the ping and traceroute functions for each
+# destination in the destinations.txt file and save the results
+# to the results directory and record any errors.
 #
-# Parameters:
+# Parameters: None
 #
-# Returns:
+# Other inputs: the contents of the destinations.txt file
+#
+# Returns: None
+#
+# Other outputs:
+# - results/ping_results.csv: a CSV file containing the ping results
+# - results/traceroute_results.csv: a CSV file containing the traceroute results
+# - results/errors.csv: a CSV file containing the error results
 # ------------------------------------------------------------
 def main():
     destinations = load_destination("destinations.txt")

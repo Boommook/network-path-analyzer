@@ -1,3 +1,0 @@
-run_id,timestamp,destination,stage,error_type,error_message
-20261031_145505,2026-10-31T14:55:34,wpi.edu,ping,nonzero_exit_code,Exit code: 1; stderr: 
-20261031_145459,2026-10-31T14:57:26,wpi.edu,ping,nonzero_exit_code,Exit code: 1; stderr: 

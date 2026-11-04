@@ -1,1 +1,0 @@
-timestamp,destination,hop_number,probe_1_ip,probe_1_rtt_ms,probe_2_ip,probe_2_rtt_ms,probe_3_ip,probe_3_rtt_ms,avg_rtt_ms,status

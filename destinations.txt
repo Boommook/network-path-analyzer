@@ -1,5 +1,12 @@
+wpi.edu
+mit.edu
+stanford.edu
 google.com
 cloudflare.com
-mit.edu
-wpi.edu
-northeastern.edu
+aws.amazon.com
+amazon.com
+microsoft.com
+wikipedia.org
+nasa.gov
+noaa.gov
+nist.gov
