@@ -4,6 +4,12 @@ import statistics
 from pathlib import Path
 from datetime import datetime
 
+#=============================================================
+# File: analysis.py
+#
+# Purpose: Analyze ping results from an automated ping test and produce summary statistics. 
+# 
+#=============================================================
 
 # ------------------------------------------------------------
 # Function: load_ping_results
@@ -54,39 +60,43 @@ def load_ping_results(filename):
 # Function: analyze_ping_results
 #
 # Purpose: turn the list of ping measurements into
-# a dictionary of analysis results for each destination with useful statistics.
+# a dictionary of analysis results for each destination and operating system with useful statistics.
 #
 # Parameters: results - a list of dictionaries with the ping measurements.
 #
-# Returns: A dictionary with the analysis results for each destination.
+# Returns: A dictionary with the analysis results for each destination and operating system.
 # ------------------------------------------------------------
 def analyze_ping_results(results):
     grouped_results = {}
 
     for row in results:
         destination = row['destination']
+        operating_system = row['operating_system']
         # append the row to the list of results for the destination
-        # if the destination is not in the dictionary, create a new list
+        # if the destination/OS pair is not in the dictionary, create a new list
         # then append the row to the list
-        grouped_results.setdefault(destination, []).append(row)
+        grouped_results.setdefault((destination, operating_system), []).append(row)
     
     analysis = {}
 
-    for destination, rows in grouped_results.items():
-        # gather all rtts for the destination
+    for key, rows in grouped_results.items():
+        # gather all of the average rtts for the destination/OS pair
         rtts = [row['avg_rtt'] for row in rows if row['avg_rtt'] is not None]
+        # gather minimum and maximum RTTs from individual ping runs
+        min_rtts = [row['min_rtt'] for row in rows if row['min_rtt'] is not None]
+        max_rtts = [row['max_rtt'] for row in rows if row['max_rtt'] is not None]
 
-        # gather all packet losses for the destination
+        # gather all packet losses for the destination/OS pair
         packet_losses = [row['packet_loss'] for row in rows if row['packet_loss'] is not None]
 
-        # compile the analysis for the destination
-        analysis[destination] = {
+        # compile the analysis for the destination/OS pair
+        analysis[key] = {
             'measurement_count': len(rows),
             'valid_rtt_count': len(rtts),
             'mean_rtt': statistics.mean(rtts) if rtts else None,
             'median_rtt': statistics.median(rtts) if rtts else None,
-            'min_rtt': min(rtts) if rtts else None,
-            'max_rtt': max(rtts) if rtts else None,
+            'min_rtt': min(min_rtts) if min_rtts else None,
+            'max_rtt': max(max_rtts) if max_rtts else None,
             'std_dev_rtt': statistics.stdev(rtts) if len(rtts) >= 2 else None,
             'mean_packet_loss': statistics.mean(packet_losses) if packet_losses else None,
             'max_packet_loss': max(packet_losses) if packet_losses else None,
