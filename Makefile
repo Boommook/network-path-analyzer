@@ -9,7 +9,7 @@ analyze:
 	$(PYTHON) analysis.py
 
 visualize:
-	$(PYTHON) visualization.py
+	$(PYTHON) visualize.py
 
 clean:
 	rm -rf __pycache__

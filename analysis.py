@@ -31,7 +31,7 @@ def traceroute_rtt_by_hop(filename):
 # Function: traceroute_hop_count_reaching_destination
 #
 # Purpose: 
-# Checks if traceroute reached the destination and creates a dictionary
+# Checks if traceroute reached each destination for each OS and creates a dictionary
 # of the minimum hop count that reached the destination for each destination & OS pair.
 #
 # Parameters: filename - the name of the file to load (results/traceroute_results.csv)
@@ -57,7 +57,7 @@ def traceroute_hop_count_reaching_destination(filename):
     hop_counts = {}
 
     for key, rows in grouped_runs.items():
-        run_id, destination, os = key
+        destination, run_id, os = key
 
         # only count for traceroute runs that reached their destination
         # so if no rows have the destination_reached flag set to true, skip the run
@@ -125,6 +125,19 @@ def load_ping_results(filename):
 
             results.append(row)
 
+    # ex. results:
+    # {
+    #   "timestamp": "2026-11-05 21:00:00",
+    #   "operating_system": "windows",
+    #   "destination": "google.com",
+    #   "packet_loss": 0.0,
+    #   "min_rtt": 34.0,
+    #   "max_rtt": 42.0,
+    #   "avg_rtt": 38.5,
+    #   "stddev_rtt": 2.8
+    # },
+    #
+    # each row is a ping run for a destination/OS pair
     return results
 
 
@@ -186,19 +199,31 @@ def analyze_ping_results(results):
     return analysis
 
 
-def analyze_ping_by_hour(analysis):
+# ------------------------------------------------------------
+# Function: analyze_ping_by_hour
+#
+# Purpose: analyze the ping results by hour using the loaded ping results.
+#
+# Parameters: results - a list of dictionaries with the individual ping measurements.
+#
+# Returns: A dictionary with the analysis results (with basic statistics) for each destination and operating system by hour.
+# ------------------------------------------------------------
+def analyze_ping_by_hour(results):
     grouped_results = {}
 
-    for key, rows in analysis.items():
+    for row in results:
         # extract the hour from the timestamp
-        timestamp = datetime.fromisoformat(key[0])
+        timestamp = datetime.fromisoformat(row['timestamp'])
         hour = timestamp.hour
 
+        destination = row['destination']
+        operating_system = row['operating_system']
+
         # group by destination, OS, and hour
-        key = (key[0], key[1], hour)
+        key = (destination, operating_system, hour)
 
         # append the row to the list of results for the key
-        grouped_results.setdefault(key, []).append(rows)
+        grouped_results.setdefault(key, []).append(row)
 
     analysis = {}
 
