@@ -4,7 +4,99 @@ from pathlib import Path
 import matplotlib.dates as mdates
 import statistics
 
-from analysis import load_ping_results
+from analysis import load_ping_results, traceroute_hop_count_reaching_destination, traceroute_rtt_by_hop
+
+# MAYBE add depending on final results
+# def plot_packet_loss
+
+def plot_traceroute_rtt_by_hop_per_destination(results, destination):
+    # only show the RTTs for the destination
+    destination_results = []
+    if not destination_results:
+        print(f"No traceroute RTT data found for destination: {destination}")
+        return
+    
+    # group the RTTs by hop number
+    grouped_results = {}
+    for row in destination_results:
+        hop_number = int(row['hop_number'])
+
+def plot_traceroute_hop_counts(hop_counts):
+    # hop_counts is (destination, os) : min_hop_count
+    if not hop_counts:
+        print("No completed traceroutes found.")
+        return
+
+    destinations = sorted(set(destination for destination, _ in hop_counts.keys()))
+    operating_systems = sorted(set(os for _, os in hop_counts.keys()))
+
+    fig, ax = plt.subplots(figsize=(14, 6))
+    colors = ['steelblue', 'darkorange']
+
+    # should just be 2, Windows and Linux
+    for i, os_name in enumerate(operating_systems):
+        positions = []
+        data = []
+
+        for j, destination in enumerate(destinations):
+            key = (destination, os_name)
+
+            # skip this destination if the key pair doesn't exist in the hop_count dict
+            if key not in hop_counts:
+                continue
+
+            positions.append(j + 1 + (i - (len(operating_systems) - 1) / 2) * 0.35)
+            data.append(hop_counts[key])
+        
+        # if not hop counts for this OS & destination pair, skip
+        if not data:
+            continue
+
+        ax.boxplot(
+            data,
+            positions=positions,
+            widths=0.3,
+            patch_artist=True,
+            manage_ticks=False,
+            boxprops=dict(
+                facecolor=colors[i % len(colors)],
+                alpha=0.6
+            ),
+            medianprops=dict(color='black', linewidth=2)
+        )
+
+        # add a legend entry for this OS
+        ax.plot(
+            [], [],
+            color=colors[i % len(colors)],
+            linewidth=8,
+            alpha=0.6,
+            label=os_name
+        )
+
+    ax.set_xticks(range(1, len(destinations) + 1))
+    ax.set_xticklabels(destinations, rotation=45, ha='right')
+
+    ax.set_title("Traceroute Hop Count by Destination and OS")
+    ax.set_xlabel("Destination")
+    ax.set_ylabel("Hop Count to Destination")
+    ax.yaxis.get_major_locator().set_params(integer=True)
+    ax.grid(axis='y', alpha=0.3)
+    ax.legend(title="Operating System")
+
+    output_dir = Path(__file__).resolve().parent / 'figures'
+    output_dir.mkdir(exist_ok=True)
+
+    output_file = output_dir / "traceroute_hop_counts.png"
+
+    fig.tight_layout()
+    fig.savefig(output_file, dpi=150)
+
+    print(f"Saved plot to: {output_file}")
+
+    plt.show()
+    plt.close(fig)
+
 
 def plot_latency_boxplot(results, os_name):
     # group avg RTT values by destination
@@ -18,7 +110,7 @@ def plot_latency_boxplot(results, os_name):
             continue
 
         destination = row['destination']
-        # append the RTT to the list of RTT data for the destination, if the destination is not in the dictionary, create a new list
+        # append the RTT to the list of avg RTT data for the destination, if the destination is not in the dictionary, create a new list
         grouped_results.setdefault(destination, []).append(row['avg_rtt'])
 
     if not grouped_results:
@@ -28,7 +120,7 @@ def plot_latency_boxplot(results, os_name):
     # sort destinations so the plot is consistent
     destinations = sorted(grouped_results.keys())
 
-    # collect RTT lists in the same order
+    # collect run-level average RTT lists in the same order
     rtt_data = [grouped_results[destination] for destination in destinations]
 
     print(rtt_data)
@@ -38,9 +130,9 @@ def plot_latency_boxplot(results, os_name):
 
     ax.boxplot(rtt_data, tick_labels=destinations, showfliers=True)
 
-    ax.set_title(f"RTT Distribution by Destination ({os_name})")
+    ax.set_title(f"Mean RTT by Destination for {os_name}")
     ax.set_xlabel("Destination")
-    ax.set_ylabel("Average Ping RTT (ms)")
+    ax.set_ylabel("Run-Level Mean Ping RTT (ms)")
     ax.grid(True, axis='y', alpha=0.3)
 
     plt.xticks(rotation=45, ha='right')
@@ -190,8 +282,8 @@ def plot_rtt_boxplot_by_time(results):
     )
 
     plt.xlabel("Time of Day")
-    plt.ylabel("RTT Deviation from Baseline (ms)")
-    plt.title("RTT Deviation by Time of Day and Operating System")
+    plt.ylabel("Normalized Run-Level Mean RTT Deviation (ms)")
+    plt.title("Mean RTT Deviation by Time and OS")
     plt.grid(axis='y', alpha=0.3)
     plt.legend(title="Operating System")
     plt.tight_layout()
@@ -280,7 +372,7 @@ def plot_rtt_single_destination(results, destination, time_only=False):
 
     # configure the title and x-axis based on the time_only parameter
     if time_only:
-        ax.set_title(f"Average Ping RTT Over Time of Day for {destination}")
+        ax.set_title(f"Mean RTT Over Time of Day for {destination}")
         ax.set_xlabel("Time of Day")
 
         # format the x-axis as a 24-hr clock
@@ -288,10 +380,10 @@ def plot_rtt_single_destination(results, destination, time_only=False):
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
         ax.set_xlim(datetime(2000,1,1), datetime(2000,1,2))
     else:
-        ax.set_title(f"Average Ping RTT Over Time for {destination}")
+        ax.set_title(f"Mean RTT Over Time for {destination}")
         ax.set_xlabel("Timestamp")
 
-    ax.set_ylabel("Average Ping RTT (ms)")
+    ax.set_ylabel("Run-Level Mean Ping RTT (ms)")
     ax.legend()
     ax.grid(True, alpha = 0.5)
 
@@ -332,7 +424,7 @@ def plot_rtt_all_destinations(results, destinations, os_name, time_only=False):
         ax.scatter(timestamps, rtts, label=destination, s=35, alpha=0.8)
 
     if time_only:
-        ax.set_title(f"Average Ping RTT Over Time of Day for {os_name}")
+        ax.set_title(f"Mean RTT Over Time of Day for {os_name}")
         ax.set_xlabel("Time of Day")
 
         # format the x-axis as a 24-hr clock
@@ -340,11 +432,11 @@ def plot_rtt_all_destinations(results, destinations, os_name, time_only=False):
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
         ax.set_xlim(datetime(2000,1,1), datetime(2000,1,2))
     else:
-        ax.set_title(f"Average Ping RTT Over Time for {os_name}")
+        ax.set_title(f"Mean RTT Over Time for {os_name}")
         ax.set_xlabel("Timestamp")
 
     ax.set_xlabel("Timestamp")
-    ax.set_ylabel("Average Ping RTT (ms)")
+    ax.set_ylabel("Run-Level Mean Ping RTT (ms)")
 
     ax.legend()
     ax.grid(True, alpha = 0.5)
@@ -362,17 +454,20 @@ def plot_rtt_all_destinations(results, destinations, os_name, time_only=False):
     plt.close(fig)
 
 def main():
-    filename = Path(__file__).resolve().parent / 'results' / 'ping_results.csv'
+    ping_filename = Path(__file__).resolve().parent / 'results' / 'ping_results.csv'
+    traceroute_filename = Path(__file__).resolve().parent / 'results' / 'traceroute_results.csv'
 
-    results = load_ping_results(filename)
+    ping_results = load_ping_results(ping_filename)
 
-    #plot_latency_boxplot(results, 'windows')
-    #plot_latency_boxplot(results, 'linux')
+    #plot_latency_boxplot(ping_results, 'windows')
+    #plot_latency_boxplot(ping_results, 'linux')
     # get the unique destinations from the results
-    destinations = sorted(set([row['destination'] for row in results]))
-    #plot_rtt_all_destinations(results, destinations, 'windows', time_only=True)
-    #plot_rtt_all_destinations(results, destinations, 'linux', time_only=True)
-    plot_rtt_boxplot_by_time(results)
+    destinations = sorted(set([row['destination'] for row in ping_results]))
+    #plot_rtt_all_destinations(ping_results, destinations, 'windows', time_only=True)
+    #plot_rtt_all_destinations(ping_results, destinations, 'linux', time_only=True)
+    #plot_rtt_boxplot_by_time(ping_results)
+    hop_counts = traceroute_hop_count_reaching_destination(traceroute_filename)
+    plot_traceroute_hop_counts(hop_counts)
 
 if __name__ == "__main__":
     main()
